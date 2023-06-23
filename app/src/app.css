@@ -1,0 +1,31 @@
+/*
+* Import fonts:
+- Syne (display, mono, pixel)
+- Roboto (body)
+*/
+@import url('https://fonts.googleapis.com/css2?family=Syne+Mono&family=Roboto:wght@300&display=swap');
+
+/* Import TailWind utility classes */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Set app to fill screen */
+html,
+body,
+#root {
+    height: 100%;
+}
+
+/* Class for text shadow since this isn't supported by TailWind yet */
+.text-shadow-white {
+    -webkit-text-stroke-width: 1px;
+    -webkit-text-stroke-color: black;
+    -webkit-text-fill-color: white;
+}
+
+.text-shadow-green {
+    -webkit-text-stroke-width: 1px;
+    -webkit-text-stroke-color: black;
+    -webkit-text-fill-color: lime;
+}
