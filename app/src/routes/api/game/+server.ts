@@ -31,10 +31,11 @@ export const POST: RequestHandler = async ({ request }) => {
 		damageReport: {},
 		newLocation: { description: undefined }
 	};
+
 	// Define functions the AI can run to set variables in a more reliable and structured way
 	const functionsAICanRun: {
 		writePlayerDamageReport: (report: Game.ShipDamageReport) => void;
-		describeNewLocation: (description: { description: string }) => void;
+		describeNewLocation: (description: { description: string; wasDetected: boolean }) => void;
 	} = {
 		writePlayerDamageReport: (report: Game.ShipDamageReport) => {
 			if (
@@ -53,10 +54,13 @@ export const POST: RequestHandler = async ({ request }) => {
 				console.log('WARNING ⚠️ writePlayerDamageReport returned invalid report', report);
 			}
 		},
-		describeNewLocation: (description: { description: string }) => {
+		describeNewLocation: (description: { description: string; wasDetected: boolean }) => {
 			if (description.description) {
-				variablesAICanSet.newLocation.description = description.description;
-				console.log('INFO 🚀 writePlayerDamageReport returned valid description', description);
+				if (description.wasDetected) {
+					variablesAICanSet.newLocation.description = description.description;
+					console.log('INFO 🚀 writePlayerDamageReport returned valid description', description);
+				}
+				console.log('INFO 🚀 writePlayerDamageReport no object detected', description);
 			} else {
 				console.log('WARNING ⚠️ describeNewLocation returned invalid description', description);
 			}
@@ -68,7 +72,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		{
 			name: 'describeNewLocation',
 			description:
-				'Does this text mention an interstellar object, such as a planet, star, moon, black hole, pulsar or space station?',
+				'Is there an interstellar object, such as a planet, star, moon, black hole, pulsar, nebula or space station?',
 			parameters: {
 				type: 'object',
 				properties: {
@@ -145,7 +149,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		if (message.function_call) {
 			const availableFunctions: {
 				writePlayerDamageReport: (args: Game.ShipDamageReport) => void;
-				describeNewLocation: (args: { description: string }) => void;
+				describeNewLocation: (args: { description: string; wasDetected: boolean }) => void;
 			} = {
 				writePlayerDamageReport: functionsAICanRun.writePlayerDamageReport,
 				describeNewLocation: functionsAICanRun.describeNewLocation
@@ -182,7 +186,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		model: 'gpt-3.5-turbo-0613',
 		messages: [{ role: 'user', content: 'Space:' + prompt.text }],
 		functions: [gameFunctions[0]],
-		function_call: 'auto' // This is the default when specifying functions but we will be explicit
+		function_call: { name: 'describeNewLocation' } // This is the default when specifying functions but we will be explicit
 	});
 	// Send prompt to the AI
 	const response_writePlayerDamageReport = await openai.createChatCompletion({
@@ -204,9 +208,6 @@ export const POST: RequestHandler = async ({ request }) => {
 		damageReport: variablesAICanSet.damageReport,
 		newLocation: variablesAICanSet.newLocation
 	};
-	console.log(
-		'🚀 ~ file: +server.ts:196 ~ constPOST:RequestHandler= ~ functionResponses.newLocation:',
-		functionResponses.newLocation
-	);
+	console.log('🚀 image prompt:', functionResponses.newLocation.description);
 	return new Response(JSON.stringify(functionResponses));
 };

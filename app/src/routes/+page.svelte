@@ -85,6 +85,9 @@
 			newLocation: { description: string | undefined };
 		} = await response.json();
 
+		// Indicate we have recieved a response from the chat
+		calculating.set(false);
+
 		/** Process location function */
 		if (functionResponses.newLocation) {
 			if (functionResponses.newLocation.description) {
@@ -133,8 +136,6 @@
 		} catch (error) {
 			console.log('⚠️ WARNING: +page.svelte: AI function call failed:', error, newDamage);
 		}
-
-		calculating.set(false);
 	}
 
 	// Simple game over screen
@@ -197,9 +198,7 @@
 			</div>
 		{:else if $calculating}
 			<div class="w-full p-2 bg-black text-green-500 border border-green-500 overflow-hidden">
-				<div
-					class="flex flex-row items-center space-x-2 animate__animated animate__slower animate__flash animate__infinite"
-				>
+				<div class="flex flex-row items-center space-x-2">
 					<p class="text-green-500 font-bold">Calculating outcome...</p>
 				</div>
 			</div>

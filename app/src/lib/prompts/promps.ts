@@ -25,7 +25,7 @@ export const initialisationAgentMessage: Message = {
     This is the Interplanetary Federation Ship IFS Dauntless. I am the
     ship computer. We have just arrived in the Zyzyx Quadrant, it is an unchartered area of
     space and our mission is to map it. 
-    The crew is ready on the bridge and waiting your instruction. For example, we might explore a distant Pulsar, a distress signal, or a nearby planet showing signs of life.`
+    The crew is ready on the bridge and waiting your instruction. For example, we might explore a nearby nebula, pulsar or habitable planet.`
 };
 
 // Content generation prompts
@@ -33,7 +33,7 @@ export const describePhenomenonPrompt: Message = {
 	id: 'describePhenomenonPrompt',
 	role: 'system',
 	content: `What does it look like? 
-    Describe the INTERSTELLAR OBJECT in the passage (for example, a planet, star, or space station).
+    Describe the INTERSTELLAR OBJECT (for example, a planet, star, or space station).
     Give it a COLOR, and NOTABLE FEATURE.
     Respond only in the following format: "A {COLOR} {INTERSTELLAR_OBJECT} with {NOTABLE_FEATURE}"
     For example, "A yellow Pulsar shining a bright beam of light into space."
@@ -43,5 +43,5 @@ export const describePhenomenonPrompt: Message = {
 
 // Example scenario response
 export const examplePrompt = `The IFS Dauntless is commanded by the captain.
-Understood, Captain.Initiating offensive protocols to target and neutralize the weapons of Pirate Ship 1. Weapons systems engaged.Targeting systems aligned.Opening fire on Pirate Ship 1's weapons emplacements. The ship's weapons unleash a barrage of energy projectiles, precisely aimed at the weapons systems of Pirate Ship 1. The volley hits its mark, causing significant damage and rendering their weapons inoperable.Direct hit! Pirate Ship 1's weapons have been disabled. They are no longer able to engage us in combat. Please note that the remaining pirate ships may respond to our attack. It is important to remain vigilant and prepared for any counterattacks. Monitor our ship's status and be ready to adapt our tactics accordingly.What are your orders, Captain ?
+Understood, Captain. Initiating offensive protocols to target and neutralize the weapons of Pirate Ship 1. Weapons systems engaged.Targeting systems aligned.Opening fire on Pirate Ship 1's weapons emplacements. The ship's weapons unleash a barrage of energy projectiles, precisely aimed at the weapons systems of Pirate Ship 1. The volley hits its mark, causing significant damage and rendering their weapons inoperable.Direct hit! Pirate Ship 1's weapons have been disabled. They are no longer able to engage us in combat. Please note that the remaining pirate ships may respond to our attack. It is important to remain vigilant and prepared for any counterattacks. Monitor our ship's status and be ready to adapt our tactics accordingly.What are your orders, Captain ?
 `;
