@@ -1,7 +1,8 @@
 import type { RequestHandler } from './$types';
-import { Configuration, OpenAIApi } from 'openai-edge';
+import { Configuration, OpenAIApi, type ChatCompletionFunctions } from 'openai-edge';
 import { OpenAIStream, StreamingTextResponse } from 'ai';
 import { API_KEY_OPENAI } from '$env/static/private';
+import { describePhenomenonPrompt } from '$lib/prompts/promps';
 
 /**
  * * Generative chat AI

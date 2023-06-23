@@ -5,13 +5,14 @@
 	import '@fortawesome/fontawesome-free/css/all.css';
 	import '@fortawesome/fontawesome-free/js/all.js';
 	import Icon from '../lib/components/Icon.svelte';
-	import { initialisationAgentMessage, initialisationSystemMessage } from '../assets/promps';
+	import { initialisationAgentMessage, initialisationSystemMessage } from '../lib/prompts/promps';
 	import { scrollToBottom } from '../lib/scroll';
 	import Hud from '../lib/components/HUD.svelte';
-	import defaultBridgeImage from '$lib/images/bridge.png';
+	import defaultBridgeImage from '$lib/images/planet.png';
 
 	// Initialise environmental variables
-	const loading = writable<boolean>(false); // Used to track when the app is loading a response
+	const loading = writable<boolean>(false); // Used to track when the app is loading an image response
+	const calculating = writable<boolean>(false); // Used to track when the app is loading a text response
 	const illustration = writable<string>(defaultBridgeImage); // An image encoded in base-64
 	const ships = writable<Game.ShipsStatus>({
 		playerShip: {
@@ -34,18 +35,17 @@
 	const { messages, handleSubmit, input } = useChat({
 		initialMessages: [initialisationSystemMessage, initialisationAgentMessage],
 		onFinish: (message: Message) => {
-			useImage(message); // Illustrate response from AI
 			useChatFn(message.content); // Run game play functions
 		}
 	});
 
 	// 2: Illustrate the response using AI image generation (Stability.ai / DALL-E)
-	async function useImage(message: Message) {
+	async function useImage(description: string) {
 		// Start loading indicator
 		loading.set(true);
 
 		// Format message from GPT as a prompt for an image
-		const prompt = JSON.stringify({ text: message.content });
+		const prompt = JSON.stringify({ text: description });
 
 		// Send the prompt to image gen AI
 		const response = await fetch('/api/image', {
@@ -66,9 +66,13 @@
 
 	// 3: Bind chat response to call functions in our code (OpenAI Functions)
 	async function useChatFn(scenario: string) {
+		// Start loading indicator
+		calculating.set(true);
+
 		// Format message from GPT as a prompt for a chat response
 		const prompt = JSON.stringify({ text: scenario });
 
+		// Get and parse response
 		const response = await fetch('/api/game', {
 			method: 'POST',
 			body: prompt,
@@ -76,8 +80,20 @@
 				'content-type': 'application/json'
 			}
 		});
+		const functionResponses: {
+			damageReport: Game.ShipsDamage;
+			newLocation: { description: string | undefined };
+		} = await response.json();
 
-		const newDamage: Game.ShipsDamage = await response.json();
+		/** Process location function */
+		if (functionResponses.newLocation) {
+			if (functionResponses.newLocation.description) {
+				useImage(functionResponses.newLocation.description);
+			}
+		}
+
+		/** Process damage function */
+		const newDamage = functionResponses.damageReport;
 
 		// Ignore empty damage reports
 		if (newDamage === undefined || Object.keys(newDamage).length === 0) {
@@ -117,6 +133,8 @@
 		} catch (error) {
 			console.log('⚠️ WARNING: +page.svelte: AI function call failed:', error, newDamage);
 		}
+
+		calculating.set(false);
 	}
 
 	// Simple game over screen
@@ -139,11 +157,6 @@
 		<Hud ship={$ships.playerShip} />
 	</nav>
 
-	<!-- Loading indicator -->
-	{#if $loading}
-		<div class="p-2 bg-green-500 animate__animated animate__bounce animate__infinite" />
-	{/if}
-
 	<div
 		class="w-full p-2 text-xl font-mono font-bold
     bg-gradient-to-t from-black to-transparent"
@@ -154,7 +167,7 @@
 			class="w-full h-60 max-h-60 p-2 overflow-y-scroll"
 			style="-webkit-mask-image: -webkit-gradient(linear, left bottom, left top, color-stop(50%,rgba(0,0,0,1)), color-stop(100%,rgba(0,0,0,0)) );"
 		>
-			<ul class="min-h-full flex flex-col justify-end text-black">
+			<ul class="min-h-full pt-20 flex flex-col justify-end text-black">
 				{#each $messages as message}
 					{#if message.role !== 'system'}
 						<li
@@ -169,29 +182,52 @@
 		</div>
 
 		<!-- Client messenger -->
-		<form on:submit={handleSubmit} class="w-full flex flex-row justify-between">
-			<div
-				class="w-full p-2 flex flex-row space-x-2 items-center bg-black text-green-500 border border-green-500"
-			>
-				<p
-					class={$input === ''
-						? 'animate__animated animate__flash animate__slower animate__infinite'
-						: ''}
+
+		<!-- Loading indicator -->
+		{#if $loading}
+			<div class="w-full p-2 bg-black text-green-500 border border-green-500 overflow-hidden">
+				<div
+					class="flex flex-row items-center space-x-2 animate__animated animate__delay-1s animate__lightSpeedOutRight animate__infinite"
 				>
-					$
-				</p>
-				<input
-					bind:value={$input}
-					placeholder="Awaiting command"
-					class="h-full w-full bg-transparent"
-				/>
+					<p class="text-green-500 font-bold">Visual incoming</p>
+					<div class="p-1/2 bg-green-500" />
+					<div class="p-1 bg-green-500" />
+					<div class="p-2 bg-green-500" />
+				</div>
 			</div>
-			<button
-				type="submit"
-				class="p-2 border border-green-500 bg-green-500 hover:border-green-200 hover:bg-green-200"
-			>
-				<Icon name="rocket" style="solid" size="2xl" color="green" />
-			</button>
-		</form>
+		{:else if $calculating}
+			<div class="w-full p-2 bg-black text-green-500 border border-green-500 overflow-hidden">
+				<div
+					class="flex flex-row items-center space-x-2 animate__animated animate__slower animate__flash animate__infinite"
+				>
+					<p class="text-green-500 font-bold">Calculating outcome...</p>
+				</div>
+			</div>
+		{:else}
+			<form on:submit={handleSubmit} class="w-full flex flex-row justify-between">
+				<div
+					class="w-full p-2 flex flex-row space-x-2 items-center bg-black text-green-500 border border-green-500"
+				>
+					<p
+						class={$input === ''
+							? 'animate__animated animate__flash animate__slower animate__infinite'
+							: ''}
+					>
+						$
+					</p>
+					<input
+						bind:value={$input}
+						placeholder="Awaiting command"
+						class="h-full w-full bg-transparent"
+					/>
+				</div>
+				<button
+					type="submit"
+					class="p-2 border border-green-500 bg-green-500 hover:border-green-200 hover:bg-green-200"
+				>
+					<Icon name="rocket" style="solid" size="2xl" color="green" />
+				</button>
+			</form>
+		{/if}
 	</div>
 </div>

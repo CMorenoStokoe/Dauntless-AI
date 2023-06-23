@@ -18,11 +18,6 @@ export const POST: RequestHandler = async ({ request }) => {
 	// Get prompt from request
 	const prompt: { text: string } = await request.json();
 
-	// Clip it to the limit
-	if (prompt.text.length > 345) {
-		prompt.text = prompt.text.substring(0, 345);
-	}
-
 	// Send the prompt to the AI API
 	const response = await fetch(`${apiHost}/v1/generation/${engineId}/text-to-image`, {
 		method: 'POST',
@@ -32,9 +27,8 @@ export const POST: RequestHandler = async ({ request }) => {
 			Authorization: `Bearer ${apiKey}`
 		},
 		body: JSON.stringify({
+			engineId: 'stable-diffusion-512-v2-1',
 			text_prompts: [prompt],
-			cfg_scale: 7,
-			clip_guidance_preset: 'FAST_BLUE',
 			height: 512,
 			width: 896,
 			samples: 1,

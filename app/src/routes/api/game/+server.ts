@@ -1,7 +1,7 @@
 import type { RequestHandler } from './$types';
 import { Configuration, OpenAIApi, type ChatCompletionFunctions } from 'openai-edge';
 import { API_KEY_OPENAI } from '$env/static/private';
-import type { Message } from 'ai';
+import { describePhenomenonPrompt } from '$lib/prompts/promps';
 
 /**
  * * Gameplay AI
@@ -23,98 +23,104 @@ export const POST: RequestHandler = async ({ request }) => {
 	// Get prompt from request
 	const prompt: { text: string } = await request.json();
 
-	// The AI can choose to call these functions to describe any damages that have taken place
-	const damageReport: Game.ShipsDamage = {};
-	const damageReportSchema: ChatCompletionFunctions['parameters'] = {
-		type: 'object',
-		properties: {
-			shipName: {
-				type: 'string',
-				description: 'The name of the ship that has been damaged.'
-			},
-			shields: {
-				type: 'number',
-				description:
-					"The amount damage taken to this ship's shields, provided as an integer from 0 to 50 depending on the severity of damage. Eg, 10 represents light damage, 30 represents severe damage."
-			},
-			communications: {
-				type: 'number',
-				description:
-					"The status of damage taken to this ship's communications, provided as an integer from 0 to 50 depending on the severity of damage. Eg, 10 represents light damage, 30 represents severe damage."
-			},
-			weapons: {
-				type: 'number',
-				description:
-					"The status of damage taken to this ship's weapons, provided as an integer from 0 to 50 depending on the severity of damage. Eg, 10 represents light damage, 30 represents severe damage."
-			},
-			engines: {
-				type: 'number',
-				description:
-					"The status of damage taken to this ship's engines, provided as an integer from 0 to 50 depending on the severity of damage. Eg, 10 represents light damage, 30 represents severe damage.."
+	// Initialise variables the AI can set
+	const variablesAICanSet: {
+		damageReport: Game.ShipsDamage;
+		newLocation: { description: string | undefined };
+	} = {
+		damageReport: {},
+		newLocation: { description: undefined }
+	};
+	// Define functions the AI can run to set variables in a more reliable and structured way
+	const functionsAICanRun: {
+		writePlayerDamageReport: (report: Game.ShipDamageReport) => void;
+		describeNewLocation: (description: { description: string }) => void;
+	} = {
+		writePlayerDamageReport: (report: Game.ShipDamageReport) => {
+			if (
+				report.shipName &&
+				(report.shields || report.weapons || report.communications || report.engines)
+			) {
+				console.log('INFO 🚀 writePlayerDamageReport returned valid report', report);
+				variablesAICanSet.damageReport.playerShip = {
+					shipName: 'IFS Dauntless',
+					shields: report.shields,
+					weapons: report.weapons,
+					communications: report.communications,
+					engines: report.engines
+				};
+			} else {
+				console.log('WARNING ⚠️ writePlayerDamageReport returned invalid report', report);
 			}
 		},
-		required: ['shipName']
-	};
-	const writePlayerDamageReport = (report: Game.ShipDamageReport) => {
-		if (
-			report.shipName &&
-			(report.shields || report.weapons || report.communications || report.engines)
-		) {
-			console.log('INFO 🚀 writePlayerDamageReport returned valid report', report);
-			damageReport.playerShip = {
-				shipName: 'IFS Dauntless',
-				shields: report.shields,
-				weapons: report.weapons,
-				communications: report.communications,
-				engines: report.engines
-			};
-		} else {
-			console.log('WARNING ⚠️ writePlayerDamageReport returned invalid report', report);
-		}
-	};
-	const writeEnemyDamageReport = (report: Game.ShipDamageReport) => {
-		if (
-			report.shipName &&
-			(report.shields || report.weapons || report.communications || report.engines)
-		) {
-			console.log('INFO 🚀 writeEnemyDamageReport returned valid report', report);
-			damageReport.enemyShip = {
-				shipName: 'Enemy ship',
-				shields: report.shields,
-				weapons: report.weapons,
-				communications: report.communications,
-				engines: report.engines
-			};
-		} else {
-			console.log('WARNING ⚠️ writeEnemyDamageReport returned invalid report', report);
+		describeNewLocation: (description: { description: string }) => {
+			if (description.description) {
+				variablesAICanSet.newLocation.description = description.description;
+				console.log('INFO 🚀 writePlayerDamageReport returned valid description', description);
+			} else {
+				console.log('WARNING ⚠️ describeNewLocation returned invalid description', description);
+			}
 		}
 	};
 
 	// Describe game functions the AI can call
 	const gameFunctions: ChatCompletionFunctions[] = [
 		{
-			name: 'writePlayerDamageReport',
+			name: 'describeNewLocation',
 			description:
-				"A damage report describing any damage the captain's ship (IFS Dauntless) has taken.",
-			parameters: damageReportSchema
+				'Does this text mention an interstellar object, such as a planet, star, moon, black hole, pulsar or space station?',
+			parameters: {
+				type: 'object',
+				properties: {
+					wasDetected: {
+						type: 'boolean',
+						description: 'Is there an interstellar object in this text?'
+					},
+					description: {
+						type: 'string',
+						description: describePhenomenonPrompt.content
+					}
+				}
+			}
 		},
 		{
-			name: 'writeEnemyDamageReport',
-			description: 'A damage report describing damage that an enemy ship has taken.',
-			parameters: damageReportSchema
+			name: 'writePlayerDamageReport',
+			description: "If the captain's ship, IFS Dauntless, has taken damage, write a damage report.",
+			parameters: {
+				type: 'object',
+				properties: {
+					shipName: {
+						type: 'string',
+						description: 'The name of the ship that has been damaged.'
+					},
+					shields: {
+						type: 'number',
+						description:
+							"The amount damage taken to this ship's shields, provided as an integer from 0 to 50 depending on the severity of damage. Eg, 10 represents light damage, 30 represents severe damage."
+					},
+					communications: {
+						type: 'number',
+						description:
+							"The status of damage taken to this ship's communications, provided as an integer from 0 to 50 depending on the severity of damage. Eg, 10 represents light damage, 30 represents severe damage."
+					},
+					weapons: {
+						type: 'number',
+						description:
+							"The status of damage taken to this ship's weapons, provided as an integer from 0 to 50 depending on the severity of damage. Eg, 10 represents light damage, 30 represents severe damage."
+					},
+					engines: {
+						type: 'number',
+						description:
+							"The status of damage taken to this ship's engines, provided as an integer from 0 to 50 depending on the severity of damage. Eg, 10 represents light damage, 30 represents severe damage.."
+					}
+				},
+				required: ['shipName']
+			}
 		}
 	];
 
-	// Send prompt to the AI
-	const response = await openai.createChatCompletion({
-		model: 'gpt-3.5-turbo-0613',
-		messages: [{ role: 'user', content: prompt.text }],
-		functions: gameFunctions,
-		function_call: 'auto' // This is the default when specifying functions but we will be explicit
-	});
-
-	// Parse response
-	const completion: {
+	// Run any fumctions called by the AI
+	const runAIFunctions = (completion: {
 		id: string;
 		object: string;
 		created: number;
@@ -131,42 +137,76 @@ export const POST: RequestHandler = async ({ request }) => {
 			}
 		];
 		usage: { prompt_tokens: number; completion_tokens: number; total_tokens: number };
-	} = await response.json();
+	}) => {
+		// Get response
+		const message = completion.choices[0].message;
 
-	// Get response
-	const message = completion.choices[0].message;
+		// Pass response to call functions
+		if (message.function_call) {
+			const availableFunctions: {
+				writePlayerDamageReport: (args: Game.ShipDamageReport) => void;
+				describeNewLocation: (args: { description: string }) => void;
+			} = {
+				writePlayerDamageReport: functionsAICanRun.writePlayerDamageReport,
+				describeNewLocation: functionsAICanRun.describeNewLocation
+			};
 
-	// Pass response to call functions
-	if (message.function_call) {
-		const availableFunctions: Record<string, (args: Record<string, any>) => void> = {
-			writePlayerDamageReport: writePlayerDamageReport,
-			writeEnemyDamageReport: writeEnemyDamageReport
-		};
+			// Parse the function the AI wants to run along with its arguments
+			const nameOfFunctionAIWantsToRun = message.function_call.name as
+				| 'writePlayerDamageReport'
+				| 'describeNewLocation';
+			const functionAIWantsToRun = availableFunctions[nameOfFunctionAIWantsToRun];
+			const functionArgs = JSON.parse(message.function_call.arguments);
 
-		// Parse the function the AI wants to run along with its arguments
-		const nameOfFunctionAIWantsToRun: string = message.function_call.name;
-		const functionAIWantsToRun: (args: Record<string, any>) => void =
-			availableFunctions[nameOfFunctionAIWantsToRun];
-		const functionArgs = JSON.parse(message.function_call.arguments);
-
-		// Try running the function
-		try {
-			functionAIWantsToRun(functionArgs);
-			console.log(
-				'✅ SUCCESS: game/+server.ts: AI called function',
-				nameOfFunctionAIWantsToRun,
-				functionArgs
-			);
-		} catch (error) {
-			console.log(
-				'⚠️ WARNING: game/+server.ts: AI function call failed:',
-				error,
-				nameOfFunctionAIWantsToRun,
-				functionArgs
-			);
+			// Try running the function
+			try {
+				functionAIWantsToRun(functionArgs);
+				console.log(
+					'✅ SUCCESS: game/+server.ts: AI called function',
+					nameOfFunctionAIWantsToRun,
+					functionArgs
+				);
+			} catch (error) {
+				console.log(
+					'⚠️ WARNING: game/+server.ts: AI function call failed:',
+					error,
+					nameOfFunctionAIWantsToRun,
+					functionArgs
+				);
+			}
 		}
-	}
+	};
+
+	// Send prompt to the AI
+	const response_describeNewLocation = await openai.createChatCompletion({
+		model: 'gpt-3.5-turbo-0613',
+		messages: [{ role: 'user', content: 'Space:' + prompt.text }],
+		functions: [gameFunctions[0]],
+		function_call: 'auto' // This is the default when specifying functions but we will be explicit
+	});
+	// Send prompt to the AI
+	const response_writePlayerDamageReport = await openai.createChatCompletion({
+		model: 'gpt-3.5-turbo-0613',
+		messages: [{ role: 'user', content: prompt.text }],
+		functions: [gameFunctions[1]],
+		function_call: 'auto' // This is the default when specifying functions but we will be explicit
+	});
+	const completion_response_describeNewLocation = await response_describeNewLocation.json();
+	const completion_response_writePlayerDamageReport = await response_writePlayerDamageReport.json();
+	runAIFunctions(completion_response_describeNewLocation);
+	runAIFunctions(completion_response_writePlayerDamageReport);
 
 	// Return the response
-	return new Response(JSON.stringify(damageReport));
+	const functionResponses: {
+		damageReport: Game.ShipsDamage;
+		newLocation: { description: string | undefined };
+	} = {
+		damageReport: variablesAICanSet.damageReport,
+		newLocation: variablesAICanSet.newLocation
+	};
+	console.log(
+		'🚀 ~ file: +server.ts:196 ~ constPOST:RequestHandler= ~ functionResponses.newLocation:',
+		functionResponses.newLocation
+	);
+	return new Response(JSON.stringify(functionResponses));
 };
