@@ -165,7 +165,7 @@
 		<!-- Chat interface -->
 		<div
 			use:scrollToBottom={$messages}
-			class="w-full h-60 max-h-60 p-2 overflow-y-scroll"
+			class="w-full h-96 max-h-96 p-2 overflow-y-scroll"
 			style="-webkit-mask-image: -webkit-gradient(linear, left bottom, left top, color-stop(50%,rgba(0,0,0,1)), color-stop(100%,rgba(0,0,0,0)) );"
 		>
 			<ul class="min-h-full pt-20 flex flex-col justify-end text-black">
