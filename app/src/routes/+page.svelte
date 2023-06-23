@@ -8,7 +8,7 @@
 	import { initialisationAgentMessage, initialisationSystemMessage } from '../lib/prompts/promps';
 	import { scrollToBottom } from '../lib/scroll';
 	import Hud from '../lib/components/HUD.svelte';
-	import defaultBridgeImage from '$lib/images/planet.png';
+	import defaultBridgeImage from '$lib/images/star.png';
 
 	// Initialise environmental variables
 	const loading = writable<boolean>(false); // Used to track when the app is loading an image response
