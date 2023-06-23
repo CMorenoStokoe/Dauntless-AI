@@ -12,6 +12,8 @@ const apiKey = API_KEY_STABILITY;
  * @returns An image generated from the prompt
  */
 
+//todo: add image upscaling https://api.stability.ai/docs#tag/v1generation/operation/upscaleImage
+
 export const POST: RequestHandler = async ({ request }) => {
 	// Get prompt from request
 	const prompt: { text: string } = await request.json();
@@ -33,11 +35,11 @@ export const POST: RequestHandler = async ({ request }) => {
 			text_prompts: [prompt],
 			cfg_scale: 7,
 			clip_guidance_preset: 'FAST_BLUE',
-			height: 600,
-			width: 800,
+			height: 512,
+			width: 896,
 			samples: 1,
-			steps: 20,
-			style_preset: 'pixel_art'
+			steps: 50,
+			style_preset: 'low-poly'
 		})
 	});
 
