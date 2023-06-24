@@ -1,7 +1,7 @@
 import type { RequestHandler } from './$types';
 import { API_KEY_STABILITY } from '$env/static/private';
 
-const engineId = 'stable-diffusion-v1-5';
+const engineId = 'stable-diffusion-xl-beta-v2-2-2';
 const apiHost = 'https://api.stability.ai';
 const apiKey = API_KEY_STABILITY;
 

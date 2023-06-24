@@ -27,5 +27,5 @@ body,
 .text-shadow-green {
     -webkit-text-stroke-width: 1px;
     -webkit-text-stroke-color: black;
-    -webkit-text-fill-color: lime;
+    -webkit-text-fill-color: #00ff00;
 }
