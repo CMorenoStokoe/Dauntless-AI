@@ -27,7 +27,7 @@ export const POST: RequestHandler = async ({ request }) => {
 			Authorization: `Bearer ${apiKey}`
 		},
 		body: JSON.stringify({
-			engineId: 'stable-diffusion-512-v2-1',
+			engineId: 'stable-diffusion-xl-beta-v2-2-2',
 			text_prompts: [prompt],
 			height: 512,
 			width: 896,

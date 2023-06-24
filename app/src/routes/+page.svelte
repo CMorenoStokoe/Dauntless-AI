@@ -65,7 +65,7 @@
 				headers: {
 					'content-type': 'application/json'
 				},
-				signal: AbortSignal.timeout(15000)
+				signal: AbortSignal.timeout(30000)
 			});
 
 			// Raise errors
@@ -103,7 +103,7 @@
 				headers: {
 					'content-type': 'application/json'
 				},
-				signal: AbortSignal.timeout(15000)
+				signal: AbortSignal.timeout(30000)
 			});
 
 			// Raise errors
