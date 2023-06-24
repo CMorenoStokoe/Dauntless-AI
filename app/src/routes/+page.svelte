@@ -13,7 +13,7 @@
 
 	// Initialise environmental variables
 	const showSplash = writable<boolean>(true); // Show the splash screen at start
-	const responding = writable<boolean>(false); // Used to track when the app is respodning to the player
+	const responding = writable<boolean>(false); // Used to track when the app is responding to the player
 	const visualising = writable<boolean>(false); // Used to track when the app is visualising an image response
 	const visualisingPrompt = writable<string>(''); // Used to record the current prompt being visualised
 	const calculating = writable<boolean>(false); // Used to track when the app is visualising a text response
@@ -46,6 +46,10 @@
 		onFinish: (message: Message) => {
 			responding.set(false);
 			useChatFn(message.content); // Run game play functions
+		},
+		onError: (error) => {
+			responding.set(false);
+			console.log(`⚠️ WARNING: useChat: Response error`, error);
 		}
 	});
 
