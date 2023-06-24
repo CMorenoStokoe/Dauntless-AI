@@ -193,7 +193,7 @@ export const POST: RequestHandler = async ({ request }) => {
 		model: 'gpt-3.5-turbo-0613',
 		messages: [{ role: 'user', content: prompt.text }],
 		functions: [gameFunctions[1]],
-		function_call: 'auto' // This is the default when specifying functions but we will be explicit
+		function_call: { name: 'writePlayerDamageReport' } // This is the default when specifying functions but we will be explicit
 	});
 	const completion_response_describeNewLocation = await response_describeNewLocation.json();
 	const completion_response_writePlayerDamageReport = await response_writePlayerDamageReport.json();

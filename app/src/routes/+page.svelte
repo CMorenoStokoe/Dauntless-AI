@@ -8,6 +8,7 @@
 	import { initialisationAgentMessage, initialisationSystemMessage } from '../lib/prompts/promps';
 	import { scrollToBottom } from '../lib/scroll';
 	import Hud from '../lib/components/HUD.svelte';
+	import { error } from '@sveltejs/kit';
 
 	// Initialise environmental variables
 	const showSplash = writable<boolean>(true); // Show the splash screen at start
@@ -57,17 +58,29 @@
 		const prompt = JSON.stringify({ text: description });
 
 		// Send the prompt to image gen AI
-		const response = await fetch('/api/image', {
-			method: 'POST',
-			body: prompt,
-			headers: {
-				'content-type': 'application/json'
-			}
-		});
+		try {
+			const response = await fetch('/api/image', {
+				method: 'POST',
+				body: prompt,
+				headers: {
+					'content-type': 'application/json'
+				},
+				signal: AbortSignal.timeout(15000)
+			});
 
-		// Get and set the image to the background
-		const encodedImageSrc = await response.text();
-		illustration.set(encodedImageSrc);
+			// Raise errors
+			if (!response.ok) {
+				throw new Error(
+					`⚠️ WARNING: useImage: Response error/timeout (${response.status}): ${response.text}`
+				);
+			}
+
+			// Get and set the image to the background
+			const encodedImageSrc = await response.text();
+			illustration.set(encodedImageSrc);
+		} catch (error) {
+			console.log('⚠️ WARNING: useImage: Failed:', error);
+		}
 
 		// Disable visualising
 		visualising.set(false);
@@ -82,68 +95,85 @@
 		const prompt = JSON.stringify({ text: scenario });
 
 		// Get and parse response
-		const response = await fetch('/api/game', {
-			method: 'POST',
-			body: prompt,
-			headers: {
-				'content-type': 'application/json'
-			}
-		});
-		const functionResponses: {
-			damageReport: Game.ShipsDamage;
-			newLocation: { description: string | undefined };
-		} = await response.json();
-
-		// Indicate we have recieved a response from the chat
-		calculating.set(false);
-
-		/** Process location function */
-		if (functionResponses.newLocation) {
-			if (functionResponses.newLocation.description) {
-				useImage(functionResponses.newLocation.description);
-			}
-		}
-
-		/** Process damage function */
-		const newDamage = functionResponses.damageReport;
-
-		// Ignore empty damage reports
-		if (newDamage === undefined || Object.keys(newDamage).length === 0) {
-			console.log('⚠️ WARNING: +page.svelte: AI function call returned empty data', newDamage);
-			return;
-		} else if (newDamage.enemyShip === undefined && newDamage.playerShip === undefined) {
-			console.log(
-				'⚠️ WARNING: +page.svelte: AI function call returned badly formatted data',
-				newDamage
-			);
-			return;
-		}
-
-		// Identify which ship was damaged
-		const damagedShip = newDamage.enemyShip ? 'enemyShip' : 'playerShip';
-
-		// Try calling the function
 		try {
-			// Apply damage to systems on the damaged ship
-			ships.update((currentStatus: Game.ShipsStatus) => {
-				const newStatus = currentStatus;
-				const systems: Array<'shields' | 'weapons' | 'communications' | 'engines'> = [
-					'shields',
-					'weapons',
-					'communications',
-					'engines'
-				];
-				systems.forEach((system) => {
-					const currentHealth = newStatus[damagedShip][system];
-					const damage = newDamage[damagedShip]![system] ?? 0;
-					const newHealth = Math.max(0, currentHealth - damage);
-					newStatus[damagedShip][system] = newHealth;
-				});
-				return newStatus;
+			// Send the prompt to image gen AI
+			const response = await fetch('/api/game', {
+				method: 'POST',
+				body: prompt,
+				headers: {
+					'content-type': 'application/json'
+				},
+				signal: AbortSignal.timeout(15000)
 			});
-			console.log('✅ SUCCESS: +page.svelte: AI function call successful', newDamage);
-		} catch (error) {
-			console.log('⚠️ WARNING: +page.svelte: AI function call failed:', error, newDamage);
+
+			// Raise errors
+			if (!response.ok) {
+				throw new Error(
+					`⚠️ WARNING: useChatFn: Response error/timeout (${response.status}): ${response.text}`
+				);
+			}
+
+			// Arrange responses
+			const functionResponses: {
+				damageReport: Game.ShipsDamage;
+				newLocation: { description: string | undefined };
+			} = await response.json();
+
+			// Indicate we have received a response from the chat
+			calculating.set(false);
+
+			/** Process damage function */
+			try {
+				const newDamage = functionResponses.damageReport;
+
+				// Ignore empty damage reports
+				if (newDamage === undefined || Object.keys(newDamage).length === 0) {
+					console.log('⚠️ WARNING: useChatFn: Empty damage report', newDamage);
+				} else if (newDamage.enemyShip === undefined && newDamage.playerShip === undefined) {
+					console.log('⚠️ WARNING: useChatFn: Badly formatted damage report', newDamage);
+				} else {
+					// Identify which ship was damaged
+					const damagedShip = newDamage.enemyShip ? 'enemyShip' : 'playerShip';
+
+					// Apply damage to systems on the damaged ship
+					ships.update((currentStatus: Game.ShipsStatus) => {
+						const newStatus = currentStatus;
+						const systems: Array<'shields' | 'weapons' | 'communications' | 'engines'> = [
+							'shields',
+							'weapons',
+							'communications',
+							'engines'
+						];
+						systems.forEach((system) => {
+							const currentHealth = newStatus[damagedShip][system];
+							const damage = newDamage[damagedShip]![system] ?? 0;
+							const newHealth = Math.max(0, currentHealth - damage);
+							newStatus[damagedShip][system] = newHealth;
+						});
+						return newStatus;
+					});
+
+					// Log success
+					console.log('✅ SUCCESS: useChatFn: Damage function executed', newDamage);
+				}
+			} catch (error) {
+				console.log('⚠️ WARNING: useChatFn: Damage function failed:', error);
+			}
+
+			/** Process location function */
+			try {
+				if (functionResponses.newLocation) {
+					const newLocation = functionResponses.newLocation.description;
+					if (newLocation) {
+						console.log('✅ SUCCESS: useChatFn: Location function executed', newLocation);
+						useImage(newLocation);
+					}
+				}
+			} catch (error) {
+				console.log('⚠️ WARNING: useChatFn: Location function failed:', error);
+			}
+		} catch {
+			console.log('⚠️ WARNING: useChatFn: Request failed:', error);
 		}
 	}
 
@@ -334,7 +364,7 @@
 		{:else if $calculating}
 			<div class="w-full p-2 bg-black text-green-500 border border-green-500 overflow-hidden">
 				<div class="flex flex-row items-center space-x-2">
-					<p class="text-green-500 font-bold">Calculating</p>
+					<p class="text-green-500 font-bold">Calculating outcome</p>
 					<p />
 				</div>
 			</div>
